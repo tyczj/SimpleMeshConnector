@@ -1,6 +1,6 @@
 package jtycz.simple.mesh.connector
 
-import android.support.v7.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import jtycz.simple.mesh.connector.ui.main.MainFragment
 

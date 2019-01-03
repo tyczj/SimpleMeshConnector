@@ -3,9 +3,9 @@ package jtycz.simple.mesh.connector.ui.barcode
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.arch.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProviders
 import android.content.Context
-import android.content.Context.CAMERA_SERVICE
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.ImageFormat
 import android.hardware.camera2.*
@@ -13,13 +13,12 @@ import android.media.ImageReader
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
-import android.support.v4.app.Fragment
-import android.support.v4.content.ContextCompat
+import androidx.core.content.ContextCompat
+import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetector
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetectorOptions
-import jtycz.simple.mesh.connector.R
 import android.util.SparseIntArray
 import android.view.*
 import androidx.annotation.NonNull
@@ -27,26 +26,7 @@ import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 
 
-class BarcodeScanningFragment : Fragment(),ImageReader.OnImageAvailableListener {
-
-    //Camera state: Showing camera preview.
-    private val STATE_PREVIEW = 0
-
-    //Camera state: Waiting for the focus to be locked.
-    private val STATE_WAITING_LOCK = 1
-
-    //Camera state: Waiting for the exposure to be precapture state.
-    private val STATE_WAITING_PRECAPTURE = 2
-
-    //Camera state: Waiting for the exposure state to be something other than precapture.
-    private val STATE_WAITING_NON_PRECAPTURE = 3
-
-    //Camera state: Picture was taken.
-    private val STATE_PICTURE_TAKEN = 4
-
-    companion object {
-        fun newInstance() = BarcodeScanningFragment()
-    }
+class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailableListener {
 
     private val ORIENTATIONS = SparseIntArray()
     private lateinit var viewModel: BarcodeScanningViewModel
@@ -81,8 +61,8 @@ class BarcodeScanningFragment : Fragment(),ImageReader.OnImageAvailableListener 
     private val stateCallback = object : CameraDevice.StateCallback() {
 
         override fun onOpened(@NonNull cameraDevice: CameraDevice) {
-            this@BarcodeScanningFragment.cameraDevice = cameraDevice
-            this@BarcodeScanningFragment.cameraDevice?.createCaptureSession(listOf<Surface>(imageReader!!.surface),sessionCallback,null)
+            this@BarcodeScanningActivity.cameraDevice = cameraDevice
+            this@BarcodeScanningActivity.cameraDevice?.createCaptureSession(listOf<Surface>(imageReader!!.surface),sessionCallback,null)
         }
 
         override fun onDisconnected(@NonNull cameraDevice: CameraDevice) {
@@ -94,9 +74,8 @@ class BarcodeScanningFragment : Fragment(),ImageReader.OnImageAvailableListener 
         }
 
         override fun onClosed(@NonNull cameraDevice: CameraDevice) {
-            this@BarcodeScanningFragment.cameraDevice = null
+            this@BarcodeScanningActivity.cameraDevice = null
         }
-
     }
 
     /**
@@ -126,16 +105,8 @@ class BarcodeScanningFragment : Fragment(),ImageReader.OnImageAvailableListener 
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val view: View = inflater.inflate(R.layout.camera_view, container, false)
-
-
-
-        return view
-    }
-
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
+    override fun onCreate(savedInstanceState:Bundle?){
+        super.onCreate(savedInstanceState)
         viewModel = ViewModelProviders.of(this).get(BarcodeScanningViewModel::class.java)
 
         ORIENTATIONS.append(Surface.ROTATION_0, 90)
@@ -158,12 +129,16 @@ class BarcodeScanningFragment : Fragment(),ImageReader.OnImageAvailableListener 
     override fun onImageAvailable(reader: ImageReader?) {
         reader?.acquireNextImage().use {
             if (it != null){
-                val image = FirebaseVisionImage.fromMediaImage(it,getRotationCompensation(cameraDevice!!.id,activity!!,context!!))
+                val image = FirebaseVisionImage.fromMediaImage(it,getRotationCompensation(cameraDevice!!.id,this,this))
 
                 detector.detectInImage(image)
                     .addOnSuccessListener { barcodes ->
                         for (barcode in barcodes){
                             val rawValue = barcode.rawValue
+                            val intent = Intent()
+                            intent.putExtra("barcode",rawValue)
+                            setResult(Activity.RESULT_OK,intent)
+                            finish()
                         }
                     }
                     .addOnFailureListener{}
@@ -171,9 +146,18 @@ class BarcodeScanningFragment : Fragment(),ImageReader.OnImageAvailableListener 
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraDevice?.close()
+        cameraDevice = null
+        captureSession = null
+        imageReader?.close()
+        imageReader = null
+    }
+
     @SuppressLint("MissingPermission")
     private val initializeOnBackground = Runnable {
-        cameraManager = activity?.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
         imageReader = ImageReader.newInstance(480, 360, ImageFormat.YUV_420_888, 1)
         imageReader?.setOnImageAvailableListener(this, backgroundHandler)
@@ -181,7 +165,7 @@ class BarcodeScanningFragment : Fragment(),ImageReader.OnImageAvailableListener 
         try {
             val camIds = cameraManager.cameraIdList
 
-            if(ContextCompat.checkSelfPermission(context!!, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED){
+            if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED){
                 cameraManager.openCamera(camIds[0], stateCallback, backgroundHandler)
             }
         } catch (e: CameraAccessException) {
