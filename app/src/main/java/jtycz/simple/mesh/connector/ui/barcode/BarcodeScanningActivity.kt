@@ -3,11 +3,13 @@ package jtycz.simple.mesh.connector.ui.barcode
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import androidx.lifecycle.ViewModelProviders
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.ImageFormat
+import android.graphics.Matrix
+import android.graphics.RectF
+import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
 import android.media.ImageReader
 import android.os.Bundle
@@ -24,6 +26,9 @@ import android.view.*
 import androidx.annotation.NonNull
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
+import jtycz.simple.mesh.connector.R
+import kotlinx.android.synthetic.main.camera_view.*
+import java.util.concurrent.Semaphore
 
 
 class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailableListener {
@@ -37,6 +42,7 @@ class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailable
     private var imageReader:ImageReader? = null
     private var backgroundThread: HandlerThread? = null
     private var backgroundHandler: Handler? = null
+
 
     private val sessionCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
@@ -93,6 +99,26 @@ class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailable
         }
     }
 
+    /**
+     * [TextureView.SurfaceTextureListener] handles several lifecycle events on a
+     * [TextureView].
+     */
+    private val surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+
+        override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
+            openCamera(width, height)
+        }
+
+        override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) {
+            configureTransform(width, height)
+        }
+
+        override fun onSurfaceTextureDestroyed(texture: SurfaceTexture) = true
+
+        override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
+
+    }
+
     private fun triggerImageCapture() {
         try {
             val captureBuilder = cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
@@ -106,7 +132,7 @@ class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailable
 
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
-
+        setContentView(R.layout.camera_view)
         ORIENTATIONS.append(Surface.ROTATION_0, 90)
         ORIENTATIONS.append(Surface.ROTATION_90, 0)
         ORIENTATIONS.append(Surface.ROTATION_180, 270)
@@ -117,11 +143,16 @@ class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailable
             .build()
 
         detector = FirebaseVision.getInstance().getVisionBarcodeDetector(options)
+    }
 
-        backgroundThread = HandlerThread("BackgroundThread")
-        backgroundThread?.start()
-        backgroundHandler = Handler(backgroundThread?.looper)
-        backgroundHandler?.post(initializeOnBackground)
+    override fun onResume() {
+        super.onResume()
+
+        if(textureView.isAvailable){
+
+        }else{
+            textureView.surfaceTextureListener = surfaceTextureListener
+        }
     }
 
     override fun onImageAvailable(reader: ImageReader?) {
@@ -146,9 +177,27 @@ class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailable
 
     override fun onDestroy() {
         super.onDestroy()
+        closeCamera()
+    }
+
+    /**
+     * Opens the camera specified by [Camera2BasicFragment.cameraId].
+     */
+    private fun openCamera(width: Int, height: Int) {
+        backgroundThread = HandlerThread("BackgroundThread")
+        backgroundThread?.start()
+        backgroundHandler = Handler(backgroundThread?.looper)
+        backgroundHandler?.post(initializeOnBackground)
+    }
+
+    /**
+     * Closes the current [CameraDevice].
+     */
+    private fun closeCamera() {
+        captureSession?.close()
+        captureSession = null
         cameraDevice?.close()
         cameraDevice = null
-        captureSession = null
         imageReader?.close()
         imageReader = null
     }
@@ -169,6 +218,38 @@ class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailable
         } catch (e: CameraAccessException) {
 
         }
+    }
+
+    /**
+     * Configures the necessary [android.graphics.Matrix] transformation to `textureView`.
+     * This method should be called after the camera preview size is determined in
+     * setUpCameraOutputs and also the size of `textureView` is fixed.
+     *
+     * @param viewWidth  The width of `textureView`
+     * @param viewHeight The height of `textureView`
+     */
+    private fun configureTransform(viewWidth: Int, viewHeight: Int) {
+        val rotation = this.windowManager.defaultDisplay.rotation
+        val matrix = Matrix()
+        val viewRect = RectF(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
+        val bufferRect = RectF(0f, 0f, previewSize.height.toFloat(), previewSize.width.toFloat())
+        val centerX = viewRect.centerX()
+        val centerY = viewRect.centerY()
+
+        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY())
+            val scale = Math.max(
+                viewHeight.toFloat() / previewSize.height,
+                viewWidth.toFloat() / previewSize.width)
+            with(matrix) {
+                setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL)
+                postScale(scale, scale, centerX, centerY)
+                postRotate((90 * (rotation - 2)).toFloat(), centerX, centerY)
+            }
+        } else if (Surface.ROTATION_180 == rotation) {
+            matrix.postRotate(180f, centerX, centerY)
+        }
+        textureView.setTransform(matrix)
     }
 
     private fun getRotationCompensation(cameraId: String, activity: Activity, context: Context): Int {
