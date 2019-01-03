@@ -29,7 +29,6 @@ import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailableListener {
 
     private val ORIENTATIONS = SparseIntArray()
-    private lateinit var viewModel: BarcodeScanningViewModel
     private lateinit var detector:FirebaseVisionBarcodeDetector
     private lateinit var cameraManager:CameraManager
 
@@ -107,7 +106,6 @@ class BarcodeScanningActivity : AppCompatActivity(),ImageReader.OnImageAvailable
 
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
-        viewModel = ViewModelProviders.of(this).get(BarcodeScanningViewModel::class.java)
 
         ORIENTATIONS.append(Surface.ROTATION_0, 90)
         ORIENTATIONS.append(Surface.ROTATION_90, 0)
