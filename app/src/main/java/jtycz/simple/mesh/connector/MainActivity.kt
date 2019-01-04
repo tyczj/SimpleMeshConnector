@@ -19,6 +19,7 @@ class MainActivity : AppCompatActivity() {
                 .replace(R.id.container, MainFragment.newInstance())
                 .commitNow()
         }
+        startBarcodeScanningActivity()
     }
 
     private fun startBarcodeScanningActivity(){
