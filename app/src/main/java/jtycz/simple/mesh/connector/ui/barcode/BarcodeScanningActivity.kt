@@ -5,6 +5,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.os.Handler
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode
@@ -39,16 +41,23 @@ class BarcodeScanningActivity : AppCompatActivity(){
 
             override fun onPictureTaken(result: PictureResult) {
                 val bitmap = result.size.let { BitmapFactory.decodeByteArray(result.data, 0, result.data.size) }
-                bitmap?.let { checkForBarcode(it) }
+                bitmap?.let {
+                    val newBitmap = Bitmap.createScaledBitmap(bitmap,480,360,false)
+                    bitmap.recycle()
+                    imageView.setImageBitmap(newBitmap)
+                    checkForBarcode(newBitmap) }
             }
 
         })
         camera.mode = Mode.PICTURE
         camera.facing = Facing.BACK
         camera.flash = Flash.OFF
+        camera.audio = Audio.OFF
 
         //kick off the picture taking
-        camera.takePictureSnapshot()
+        val handler = Handler()
+        handler.postDelayed({camera.takePictureSnapshot()},1000)
+
     }
 
     override fun onResume() {
