@@ -17,6 +17,9 @@ import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import com.otaliastudios.cameraview.*
 import jtycz.simple.mesh.connector.R
 import kotlinx.android.synthetic.main.camera_view.*
+import com.google.android.gms.common.util.IOUtils.toByteArray
+import java.io.ByteArrayOutputStream
+
 
 /**
  * Using a 3rd party camera library for interfacing with the camera because the camera API is stupid complex
@@ -32,47 +35,25 @@ class BarcodeScanningActivity : AppCompatActivity(){
         setContentView(R.layout.camera_view)
 
         val options:FirebaseVisionBarcodeDetectorOptions = FirebaseVisionBarcodeDetectorOptions.Builder()
-            .setBarcodeFormats(FirebaseVisionBarcode.FORMAT_DATA_MATRIX)
+            .setBarcodeFormats(FirebaseVisionBarcode.FORMAT_ALL_FORMATS) //For some reason the barcode detector only find the data matrix in this format
             .build()
 
         detector = FirebaseVision.getInstance().getVisionBarcodeDetector(options)
 
-//        CameraLogger.setLogLevel(CameraLogger.LEVEL_VERBOSE)
-//        camera.setLifecycleOwner(this)
-        camera.addCameraListener(object : CameraListener(){
-
-            override fun onPictureTaken(result: PictureResult) {
-                byteData(result.data)
-
-                val bitmap = result.size.let { BitmapFactory.decodeByteArray(result.data, 0, result.data.size) }
-                bitmap?.let {
-                    val newBitmap = Bitmap.createScaledBitmap(bitmap,480,360,false)
-                    bitmap.recycle()
-                    imageView.setImageBitmap(newBitmap)
-//                    checkForBarcode(newBitmap)
-                }
+        camera.setLifecycleOwner(this)
+        camera.addCameraListener(object : CameraListener() {
+            override fun onPictureTaken(jpeg: ByteArray?) {
+                val bitmap = jpeg?.size?.let { BitmapFactory.decodeByteArray(jpeg, 0, it) }
+                bitmap?.let { checkForBarcode(it) }
+                imageView.setImageBitmap(bitmap)
             }
 
         })
-        camera.mode = Mode.PICTURE
-        camera.facing = Facing.BACK
-        camera.flash = Flash.OFF
-        camera.audio = Audio.OFF
 
         //kick off the picture taking
         val handler = Handler()
-        handler.postDelayed({camera.takePictureSnapshot()},1000)
+        handler.postDelayed({camera.captureSnapshot()},1000)
 
-    }
-
-    override fun onResume() {
-        super.onResume()
-        camera.open()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        camera.close()
     }
 
     override fun onDestroy() {
@@ -91,33 +72,8 @@ class BarcodeScanningActivity : AppCompatActivity(){
                 finish()
             }else{
                 //no barcode found, take another picture
-                camera.takePictureSnapshot()
+                camera.captureSnapshot()
             }
         }
     }
-
-    private fun byteData(data:ByteArray){
-        val metadata = FirebaseVisionImageMetadata.Builder()
-            .setWidth(480)   // 480x360 is typically sufficient for
-            .setHeight(360)  // image recognition
-            .setFormat(FirebaseVisionImageMetadata.IMAGE_FORMAT_NV21)
-            .setRotation(FirebaseVisionImageMetadata.ROTATION_0)
-            .build()
-
-        val image = FirebaseVisionImage.fromByteArray(data,metadata)
-
-        detector.detectInImage(image).addOnSuccessListener {
-            Log.d("BarcodeScanningActivity","Barcodes found: ${it.size}")
-            if(!it.isEmpty()){
-                val intent = Intent()
-                intent.putExtra("barcode",it.first().rawValue)
-                setResult(Activity.RESULT_OK,intent)
-                finish()
-            }else{
-                //no barcode found, take another picture
-                camera.takePictureSnapshot()
-            }
-        }
-    }
-
 }

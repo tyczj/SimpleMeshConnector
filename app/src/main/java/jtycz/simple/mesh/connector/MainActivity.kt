@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startBarcodeScanningActivity(){
-        val intent = Intent(this,BarcodeScanningActivity::class.java)
+        val intent = Intent(this, BarcodeScanningActivity::class.java)
         startActivityForResult(intent,BARCODE_REQUEST_CODE)
     }
 
