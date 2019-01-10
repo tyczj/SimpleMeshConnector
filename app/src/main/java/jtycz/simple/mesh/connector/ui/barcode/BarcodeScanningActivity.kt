@@ -13,6 +13,7 @@ import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetector
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetectorOptions
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
+import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import com.otaliastudios.cameraview.*
 import jtycz.simple.mesh.connector.R
 import kotlinx.android.synthetic.main.camera_view.*
@@ -36,16 +37,20 @@ class BarcodeScanningActivity : AppCompatActivity(){
 
         detector = FirebaseVision.getInstance().getVisionBarcodeDetector(options)
 
+//        CameraLogger.setLogLevel(CameraLogger.LEVEL_VERBOSE)
 //        camera.setLifecycleOwner(this)
         camera.addCameraListener(object : CameraListener(){
 
             override fun onPictureTaken(result: PictureResult) {
+                byteData(result.data)
+
                 val bitmap = result.size.let { BitmapFactory.decodeByteArray(result.data, 0, result.data.size) }
                 bitmap?.let {
                     val newBitmap = Bitmap.createScaledBitmap(bitmap,480,360,false)
                     bitmap.recycle()
                     imageView.setImageBitmap(newBitmap)
-                    checkForBarcode(newBitmap) }
+//                    checkForBarcode(newBitmap)
+                }
             }
 
         })
@@ -78,6 +83,31 @@ class BarcodeScanningActivity : AppCompatActivity(){
     private fun checkForBarcode(bitmap: Bitmap){
         val image = FirebaseVisionImage.fromBitmap(bitmap)
         detector.detectInImage(image).addOnSuccessListener {
+            Log.d("BarcodeScanningActivity","Barcodes found: ${it.size}")
+            if(!it.isEmpty()){
+                val intent = Intent()
+                intent.putExtra("barcode",it.first().rawValue)
+                setResult(Activity.RESULT_OK,intent)
+                finish()
+            }else{
+                //no barcode found, take another picture
+                camera.takePictureSnapshot()
+            }
+        }
+    }
+
+    private fun byteData(data:ByteArray){
+        val metadata = FirebaseVisionImageMetadata.Builder()
+            .setWidth(480)   // 480x360 is typically sufficient for
+            .setHeight(360)  // image recognition
+            .setFormat(FirebaseVisionImageMetadata.IMAGE_FORMAT_NV21)
+            .setRotation(FirebaseVisionImageMetadata.ROTATION_0)
+            .build()
+
+        val image = FirebaseVisionImage.fromByteArray(data,metadata)
+
+        detector.detectInImage(image).addOnSuccessListener {
+            Log.d("BarcodeScanningActivity","Barcodes found: ${it.size}")
             if(!it.isEmpty()){
                 val intent = Intent()
                 intent.putExtra("barcode",it.first().rawValue)

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">SimpleParticleMeshConnector</string>
+    <string name="title_activity_barcode_scanning2">BarcodeScanningActivity2</string>
 </resources>
