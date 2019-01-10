@@ -13,12 +13,9 @@ import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcode
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetector
 import com.google.firebase.ml.vision.barcode.FirebaseVisionBarcodeDetectorOptions
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
-import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import com.otaliastudios.cameraview.*
 import jtycz.simple.mesh.connector.R
 import kotlinx.android.synthetic.main.camera_view.*
-import com.google.android.gms.common.util.IOUtils.toByteArray
-import java.io.ByteArrayOutputStream
 
 
 /**

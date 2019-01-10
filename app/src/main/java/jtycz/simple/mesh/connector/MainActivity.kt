@@ -5,11 +5,13 @@ import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import jtycz.simple.mesh.connector.ui.barcode.BarcodeScanningActivity
+import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothScanningFragment
 import jtycz.simple.mesh.connector.ui.main.MainFragment
 
 class MainActivity : AppCompatActivity() {
 
     private val BARCODE_REQUEST_CODE = 1
+    private var bluetoothFragment: BluetoothScanningFragment? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +33,8 @@ class MainActivity : AppCompatActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if(requestCode == BARCODE_REQUEST_CODE && resultCode == Activity.RESULT_OK){
             //TODO go and connect to device
+            bluetoothFragment = BluetoothScanningFragment.newInstance()
+
         }
     }
 
