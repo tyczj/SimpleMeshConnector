@@ -5,6 +5,7 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.Context
 import androidx.lifecycle.ViewModelProviders
 import android.os.Bundle
 import android.os.ParcelUuid
@@ -19,14 +20,27 @@ import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothUtils.Companion.CLIENT_
 
 class BluetoothScanningFragment : androidx.fragment.app.Fragment() {
 
+    interface OnBluetoothConnected{
+        fun onBluetoothConnected(bluetoothDevice:BluetoothDevice)
+    }
+
     companion object {
         fun newInstance() = BluetoothScanningFragment()
     }
 
     private lateinit var bluetoothAdapter:BluetoothAdapter
     private lateinit var viewModel: BluetoothScanningViewModel
-
     private lateinit var deviceName:String
+    private lateinit var listener:OnBluetoothConnected
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        try{
+            listener = activity as OnBluetoothConnected
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val view:View = inflater.inflate(R.layout.main_fragment, container, false)

@@ -1,14 +1,16 @@
 package jtycz.simple.mesh.connector
 
 import android.app.Activity
+import android.bluetooth.BluetoothDevice
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import jtycz.simple.mesh.connector.ui.barcode.BarcodeScanningActivity
 import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothScanningFragment
 import jtycz.simple.mesh.connector.ui.main.MainFragment
+import jtycz.simple.mesh.connector.ui.wifi.WifiScanningFragment
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothConnected {
 
     private val BARCODE_REQUEST_CODE = 1
     private var bluetoothFragment: BluetoothScanningFragment? = null
@@ -36,6 +38,12 @@ class MainActivity : AppCompatActivity() {
             bluetoothFragment = BluetoothScanningFragment.newInstance()
 
         }
+    }
+
+    override fun onBluetoothConnected(bluetoothDevice: BluetoothDevice) {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.container, WifiScanningFragment.newInstance())
+            .commitNow()
     }
 
 }
