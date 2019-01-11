@@ -30,28 +30,30 @@ class BluetoothUtils {
         val NORDIC_BT_SETUP_RX_CHARACTERISTIC_ID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
 
         val CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
-    }
 
-    public fun getDeviceName(serialNumber:String): String {
+        fun getDeviceName(serialNumber:String): String {
 
-        val deviceType = getDeviceTypeName(serialNumber)
-        val lastSix = serialNumber.substring(serialNumber.length - BLUETOOTH_ID_LENGTH).toUpperCase()
-        return "$deviceType-$lastSix"
-    }
+            val deviceType = getDeviceTypeName(serialNumber)
+            val lastSix = serialNumber.substring(serialNumber.length - BLUETOOTH_ID_LENGTH).toUpperCase()
+            return "$deviceType-$lastSix"
+        }
 
-    private fun getDeviceTypeName(serialNumber: String): String {
-        val first4 = serialNumber.substring(0, 4)
-        return when (first4) {
-            ARGON_SERIAL_PREFIX1,
-            ARGON_SERIAL_PREFIX2,
-            ARGON_SERIAL_PREFIX3 -> "Argon"
-            XENON_SERIAL_PREFIX1,
-            XENON_SERIAL_PREFIX2 -> "Xenon"
-            BORON_LTE_SERIAL_PREFIX1,
-            BORON_LTE_SERIAL_PREFIX2,
-            BORON_3G_SERIAL_PREFIX1,
-            BORON_3G_SERIAL_PREFIX2 -> "Boron"
-            else -> "UNKNOWN"
+        private fun getDeviceTypeName(serialNumber: String): String {
+            val first4 = serialNumber.substring(0, 4)
+            return when (first4) {
+                ARGON_SERIAL_PREFIX1,
+                ARGON_SERIAL_PREFIX2,
+                ARGON_SERIAL_PREFIX3 -> "Argon"
+                XENON_SERIAL_PREFIX1,
+                XENON_SERIAL_PREFIX2 -> "Xenon"
+                BORON_LTE_SERIAL_PREFIX1,
+                BORON_LTE_SERIAL_PREFIX2,
+                BORON_3G_SERIAL_PREFIX1,
+                BORON_3G_SERIAL_PREFIX2 -> "Boron"
+                else -> "UNKNOWN"
+            }
         }
     }
+
+
 }

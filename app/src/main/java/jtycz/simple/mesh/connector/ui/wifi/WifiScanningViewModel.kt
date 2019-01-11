@@ -5,5 +5,6 @@ import androidx.lifecycle.ViewModel
 
 class WifiScanningViewModel:ViewModel() {
 
-    var wifiNetworks:MutableList<ScanResult> = MutableList<ScanResult>()
+    var wifiNetworks:MutableList<ScanResult> = mutableListOf()
+    var selectedNetwork:ScanResult? = null
 }

@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import jtycz.simple.mesh.connector.ui.barcode.BarcodeScanningActivity
 import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothScanningFragment
+import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothUtils
 import jtycz.simple.mesh.connector.ui.main.MainFragment
 import jtycz.simple.mesh.connector.ui.wifi.WifiScanningFragment
 
@@ -34,16 +35,27 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if(requestCode == BARCODE_REQUEST_CODE && resultCode == Activity.RESULT_OK){
-            //TODO go and connect to device
+            //Go and connect to device
+            val barcode = data!!.getStringExtra("barcode")
+            val deviceName = BluetoothUtils.getDeviceName(barcode)
             bluetoothFragment = BluetoothScanningFragment.newInstance()
-
+            val bundle = Bundle()
+            bundle.putString("deviceName",deviceName)
+            bluetoothFragment!!.arguments = bundle
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.container, bluetoothFragment!!)
+                .commitNow()
         }
     }
 
     override fun onBluetoothConnected(bluetoothDevice: BluetoothDevice) {
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.container, WifiScanningFragment.newInstance())
-            .commitNow()
+        when{
+            bluetoothDevice.name.contains("Argon") ->{
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.container, WifiScanningFragment.newInstance())
+                    .commitNow()
+            }
+        }
     }
 
 }
