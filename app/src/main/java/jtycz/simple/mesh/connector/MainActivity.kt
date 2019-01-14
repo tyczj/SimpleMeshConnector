@@ -1,13 +1,13 @@
 package jtycz.simple.mesh.connector
 
 import android.app.Activity
-import android.bluetooth.BluetoothDevice
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import jtycz.simple.mesh.connector.ui.barcode.BarcodeScanningActivity
 import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothScanningFragment
-import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothUtils
+import jtycz.simple.mesh.connector.bluetooth.BluetoothUtils
+import jtycz.simple.mesh.connector.bluetooth.ConnectedBluetoothDevice
 import jtycz.simple.mesh.connector.ui.main.MainFragment
 import jtycz.simple.mesh.connector.ui.wifi.WifiScanningFragment
 
@@ -48,9 +48,9 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
         }
     }
 
-    override fun onBluetoothConnected(bluetoothDevice: BluetoothDevice) {
+    override fun onBluetoothConnected(connectedBluetoothDevice: ConnectedBluetoothDevice) {
         when{
-            bluetoothDevice.name.contains("Argon") ->{
+            connectedBluetoothDevice.deviceName.contains("Argon") ->{
                 supportFragmentManager.beginTransaction()
                     .replace(R.id.container, WifiScanningFragment.newInstance())
                     .commitNow()

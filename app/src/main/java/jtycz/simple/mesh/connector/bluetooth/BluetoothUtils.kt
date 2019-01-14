@@ -1,4 +1,4 @@
-package jtycz.simple.mesh.connector.ui.bluetooth
+package jtycz.simple.mesh.connector.bluetooth
 
 import java.util.*
 
@@ -33,7 +33,8 @@ class BluetoothUtils {
 
         fun getDeviceName(serialNumber:String): String {
 
-            val deviceType = getDeviceTypeName(serialNumber)
+            val deviceType =
+                getDeviceTypeName(serialNumber)
             val lastSix = serialNumber.substring(serialNumber.length - BLUETOOTH_ID_LENGTH).toUpperCase()
             return "$deviceType-$lastSix"
         }

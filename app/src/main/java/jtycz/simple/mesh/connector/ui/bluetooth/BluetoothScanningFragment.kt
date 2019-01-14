@@ -13,15 +13,20 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import jtycz.simple.mesh.connector.R
-import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothUtils.Companion.BT_SETUP_READ_CHARACTERISTIC_ID
-import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothUtils.Companion.BT_SETUP_SERVICE_ID
-import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothUtils.Companion.BT_SETUP_WRITE_CHARACTERISTIC_ID
-import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothUtils.Companion.CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID
+import jtycz.simple.mesh.connector.bluetooth.BluetoothUtils.Companion.BT_SETUP_READ_CHARACTERISTIC_ID
+import jtycz.simple.mesh.connector.bluetooth.BluetoothUtils.Companion.BT_SETUP_SERVICE_ID
+import jtycz.simple.mesh.connector.bluetooth.BluetoothUtils.Companion.BT_SETUP_WRITE_CHARACTERISTIC_ID
+import jtycz.simple.mesh.connector.bluetooth.BluetoothUtils.Companion.CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID
+import jtycz.simple.mesh.connector.bluetooth.ConnectedBluetoothDevice
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 
 class BluetoothScanningFragment : androidx.fragment.app.Fragment() {
 
     interface OnBluetoothConnected{
-        fun onBluetoothConnected(bluetoothDevice:BluetoothDevice)
+        fun onBluetoothConnected(connectedBluetoothDevice: ConnectedBluetoothDevice)
     }
 
     companion object {
@@ -31,6 +36,7 @@ class BluetoothScanningFragment : androidx.fragment.app.Fragment() {
     private lateinit var bluetoothAdapter:BluetoothAdapter
     private lateinit var viewModel: BluetoothScanningViewModel
     private lateinit var deviceName:String
+    private lateinit var deviceSecret:String
     private lateinit var listener:OnBluetoothConnected
 
     override fun onAttach(context: Context) {
@@ -47,7 +53,8 @@ class BluetoothScanningFragment : androidx.fragment.app.Fragment() {
 
         var bundle:Bundle? = arguments
         bundle?.let {
-            deviceName = bundle.getString("deviceName")!!
+            deviceName = it.getString("deviceName")!!
+            deviceSecret = it.getString("deviceSecret")!!
         }
         return view
     }
@@ -107,16 +114,39 @@ class BluetoothScanningFragment : androidx.fragment.app.Fragment() {
             super.onConnectionStateChange(gatt, status, newState)
             if(newState == BluetoothProfile.STATE_CONNECTED){
                 val service = gatt?.services?.firstOrNull{it.uuid == BT_SETUP_SERVICE_ID}
-                val characteristic = service?.characteristics?.firstOrNull { it.uuid == BT_SETUP_READ_CHARACTERISTIC_ID }
+                val readCharacteristic = service?.characteristics?.firstOrNull { it.uuid == BT_SETUP_READ_CHARACTERISTIC_ID }
                 val writeCharacteristic = service?.characteristics?.firstOrNull {it.uuid == BT_SETUP_WRITE_CHARACTERISTIC_ID}
-                gatt?.setCharacteristicNotification(characteristic,true)
-                val descriptor = characteristic?.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID)
+                gatt?.setCharacteristicNotification(readCharacteristic,true)
+                val descriptor = readCharacteristic?.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID)
                 descriptor?.let {
                     if(it.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)){
                         gatt.writeDescriptor(descriptor)
+
+                        val messageWriteChannel = Channel<ByteArray>(Channel.UNLIMITED)
+                        GlobalScope.launch(Dispatchers.Default) {
+                            for (packet in messageWriteChannel) {
+                                writeCharacteristic?.value = packet
+                            }
+                        }
+
+                        val receiveChannel = Channel<ByteArray>(256)
+
+                        val connectedDevice = ConnectedBluetoothDevice(
+                            deviceName,
+                            deviceSecret,
+                            gatt,
+                            writeCharacteristic!!,
+                            messageWriteChannel,
+                            receiveChannel
+                        )
+                        listener.onBluetoothConnected(connectedDevice)
                     }
                 }
             }
+        }
+
+        override fun onCharacteristicRead(gatt: BluetoothGatt?,characteristic: BluetoothGattCharacteristic?,status: Int) {
+            super.onCharacteristicRead(gatt, characteristic, status)
         }
     }
 }
