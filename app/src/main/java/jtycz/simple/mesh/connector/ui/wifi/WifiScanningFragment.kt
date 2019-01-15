@@ -17,11 +17,15 @@ import androidx.recyclerview.widget.RecyclerView
 import jtycz.simple.mesh.connector.MainActivity
 import jtycz.simple.mesh.connector.R
 import kotlinx.android.synthetic.main.wifi_scanning_layout.*
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 
 class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
 
+    // dispatches execution into Android main thread
+    val uiDispatcher: CoroutineDispatcher = Dispatchers.Main
+    val uiScope = CoroutineScope(Dispatchers.Main)
+    // represent a pool of shared threads as coroutine dispatcher
+    val bgDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     companion object {
         fun newInstance() = WifiScanningFragment()
@@ -30,7 +34,6 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
     private lateinit var viewModel: WifiScanningViewModel
     private lateinit var wifiManager:WifiManager
     private var adapter:WifiAdapter = WifiAdapter()
-    val uiDispatcher: CoroutineDispatcher = Dispatchers.Main
 
     private val wifiSecurityTypes = arrayOf("WEP", "PSK", "EAP")
 
@@ -38,7 +41,7 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
         return inflater.inflate(R.layout.wifi_scanning_layout, container, false)
     }
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
+    override fun onActivityCreated(savedInstanceState: Bundle?){
         super.onActivityCreated(savedInstanceState)
         viewModel = ViewModelProviders.of(this).get(WifiScanningViewModel::class.java)
 
@@ -59,7 +62,13 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
         }
 
         if(viewModel.connectedBluetoothDevice != null){
-            viewModel.getWifiNetworks()
+            CoroutineScope(Dispatchers.Main).launch {
+
+                val task = withContext(Dispatchers.IO){
+                    viewModel.getWifiNetworks()
+                }
+
+            }
         }
     }
 

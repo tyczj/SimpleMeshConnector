@@ -19,7 +19,7 @@ class WifiScanningViewModel:ViewModel() {
     var selectedNetwork:ScanResult? = null
     var connectedBluetoothDevice:ConnectedBluetoothDevice? = null
 
-    private suspend fun getWifiNetworks(){
+    suspend fun getWifiNetworks(){
         val deviceUtil = DeviceCommunicator.buildCommunicator(connectedBluetoothDevice!!, Security())
         val timeoutMills = 20000L //20 seconds
         val request = WifiNew.ScanNetworksRequest.newBuilder().build()
