@@ -15,6 +15,7 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
 
     private val BARCODE_REQUEST_CODE = 1
     private var bluetoothFragment: BluetoothScanningFragment? = null
+    var connectedBluetoothDevice:ConnectedBluetoothDevice? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +50,7 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
     }
 
     override fun onBluetoothConnected(connectedBluetoothDevice: ConnectedBluetoothDevice) {
+        this@MainActivity.connectedBluetoothDevice = connectedBluetoothDevice
         when{
             connectedBluetoothDevice.deviceName.contains("Argon") ->{
                 supportFragmentManager.beginTransaction()

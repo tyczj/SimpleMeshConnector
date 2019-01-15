@@ -14,17 +14,11 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.protobuf.ByteString
+import jtycz.simple.mesh.connector.MainActivity
 import jtycz.simple.mesh.connector.R
-import jtycz.simple.mesh.connector.protos.WifiNew
-import jtycz.simple.mesh.connector.utils.DeviceRequestUtil
-import jtycz.simple.mesh.connector.utils.asRequest
 import kotlinx.android.synthetic.main.wifi_scanning_layout.*
-import kotlinx.coroutines.withTimeoutOrNull
-import java.nio.charset.Charset
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 
 class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
 
@@ -36,6 +30,7 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
     private lateinit var viewModel: WifiScanningViewModel
     private lateinit var wifiManager:WifiManager
     private var adapter:WifiAdapter = WifiAdapter()
+    val uiDispatcher: CoroutineDispatcher = Dispatchers.Main
 
     private val wifiSecurityTypes = arrayOf("WEP", "PSK", "EAP")
 
@@ -58,19 +53,17 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
         adapter.networks = viewModel.wifiNetworks
         recyclerView.layoutManager = linearLayoutManager
         recyclerView.adapter = adapter
-    }
 
-    private suspend fun getWifiNetworks(){
-        val timeoutMills = 20000L //20 seconds
-        val request = WifiNew.ScanNetworksRequest.newBuilder().build()
-        val requestFrame = request.asRequest()
-        val response = withTimeoutOrNull(timeoutMills) {
-            suspendCoroutine { continuation: Continuation<DeviceRequestUtil.DeviceResponse?> ->
-                val deviceUtil = DeviceRequestUtil()
-                deviceUtil.doSendRequest(requestFrame) { continuation.resume(it) }
-            }
+        if(viewModel.connectedBluetoothDevice == null){
+            viewModel.connectedBluetoothDevice = (activity as MainActivity).connectedBluetoothDevice
+        }
+
+        if(viewModel.connectedBluetoothDevice != null){
+            viewModel.getWifiNetworks()
         }
     }
+
+
 
     private val wifiScanReceiver = object : BroadcastReceiver() {
 
@@ -87,44 +80,44 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
         //TODO join network
         viewModel.selectedNetwork = scanResult
 
-        val request = WifiNew.ScanNetworksRequest.newBuilder().build()
-        request.asRequest()
-        val response = withTimeoutOrNull(timeout) {
-            suspendCoroutine { continuation: Continuation<DeviceRequestUtil.DeviceResponse?> ->
-                doSendRequest(requestFrame) { continuation.resume(it) }
-            }
-        }
+//        val request = WifiNew.ScanNetworksRequest.newBuilder().build()
+//        request.asRequest()
+//        val response = withTimeoutOrNull(timeout) {
+//            suspendCoroutine { continuation: Continuation<DeviceRequestUtil.DeviceResponse?> ->
+//                doSendRequest(requestFrame) { continuation.resume(it) }
+//            }
+//        }
 
     }
 
-    private fun joinNetwork(scanResult: ScanResult){
-
-        val networkBuilder = WifiNew.ScanNetworksReply.Network.newBuilder()
-        networkBuilder.bssid = ByteString.copyFrom(scanResult.BSSID,Charset.forName("UTF-8"))
-        networkBuilder.ssid = scanResult.SSID
-
-        if(isSecureConnection(scanResult)){
-            networkBuilder.security = WifiNew.Security.
-        }
-        val credentials = if (network.security == WifiNew.Security.NO_SECURITY) {
-            WifiNew.Credentials.newBuilder()
-                .setType(WifiNew.CredentialsType.NO_CREDENTIALS)
-                .build()
-        } else {
-            WifiNew.Credentials.newBuilder()
-                .setType(WifiNew.CredentialsType.PASSWORD)
-                .setPassword(password)
-                .build()
-        }
-
-        val response = sendRequest(
-            WifiNew.JoinNewNetworkRequest.newBuilder()
-                .setSsid(network.ssid)
-                .setSecurity(network.security)
-                .setCredentials(credentials)
-                .build()
-        )
-    }
+//    private fun joinNetwork(scanResult: ScanResult){
+//
+//        val networkBuilder = WifiNew.ScanNetworksReply.Network.newBuilder()
+//        networkBuilder.bssid = ByteString.copyFrom(scanResult.BSSID,Charset.forName("UTF-8"))
+//        networkBuilder.ssid = scanResult.SSID
+//
+//        if(isSecureConnection(scanResult)){
+//            networkBuilder.security = WifiNew.Security.
+//        }
+//        val credentials = if (network.security == WifiNew.Security.NO_SECURITY) {
+//            WifiNew.Credentials.newBuilder()
+//                .setType(WifiNew.CredentialsType.NO_CREDENTIALS)
+//                .build()
+//        } else {
+//            WifiNew.Credentials.newBuilder()
+//                .setType(WifiNew.CredentialsType.PASSWORD)
+//                .setPassword(password)
+//                .build()
+//        }
+//
+//        val response = sendRequest(
+//            WifiNew.JoinNewNetworkRequest.newBuilder()
+//                .setSsid(network.ssid)
+//                .setSecurity(network.security)
+//                .setCredentials(credentials)
+//                .build()
+//        )
+//    }
 
     private fun isSecureConnection(scanResult: ScanResult):Boolean{
         for (securityType in wifiSecurityTypes) {
