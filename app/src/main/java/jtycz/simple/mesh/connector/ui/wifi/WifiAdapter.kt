@@ -8,16 +8,17 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import jtycz.simple.mesh.connector.R
+import jtycz.simple.mesh.connector.protos.WifiNew
 
 class WifiAdapter: RecyclerView.Adapter<WifiAdapter.ViewHolder>() {
 
     interface OnNetworkClickedListener{
-        fun onNetworkClicked(scanResult:ScanResult)
+        fun onNetworkClicked(scanResult: WifiNew.ScanNetworksReply.Network)
     }
 
     var listener:OnNetworkClickedListener? = null
 
-    var networks:MutableList<ScanResult> = mutableListOf()
+    var networks:MutableList<WifiNew.ScanNetworksReply.Network> = mutableListOf()
         set(value) {
             val result:DiffUtil.DiffResult = DiffUtil.calculateDiff(WifiDiffCallback(value,networks),true)
             result.dispatchUpdatesTo(this)
@@ -33,7 +34,7 @@ class WifiAdapter: RecyclerView.Adapter<WifiAdapter.ViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.ssid.text = networks[position].SSID
+        holder.ssid.text = networks[position].ssid
     }
 
     inner class ViewHolder(view: View):RecyclerView.ViewHolder(view),View.OnClickListener{

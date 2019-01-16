@@ -1,11 +1,6 @@
 package jtycz.simple.mesh.connector.ui.wifi
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.net.wifi.ScanResult
-import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,6 +11,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import jtycz.simple.mesh.connector.MainActivity
 import jtycz.simple.mesh.connector.R
+import jtycz.simple.mesh.connector.protos.WifiNew
+import jtycz.simple.mesh.connector.security.Security
+import jtycz.simple.mesh.connector.utils.DeviceCommunicator
 import kotlinx.android.synthetic.main.wifi_scanning_layout.*
 import kotlinx.coroutines.*
 
@@ -32,7 +30,7 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
     }
 
     private lateinit var viewModel: WifiScanningViewModel
-    private lateinit var wifiManager:WifiManager
+//    private lateinit var wifiManager:WifiManager
     private var adapter:WifiAdapter = WifiAdapter()
 
     private val wifiSecurityTypes = arrayOf("WEP", "PSK", "EAP")
@@ -45,11 +43,11 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
         super.onActivityCreated(savedInstanceState)
         viewModel = ViewModelProviders.of(this).get(WifiScanningViewModel::class.java)
 
-        wifiManager = context!!.getSystemService(Context.WIFI_SERVICE) as WifiManager
-
-        val intentFilter = IntentFilter()
-        intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
-        context!!.registerReceiver(wifiScanReceiver, intentFilter)
+//        wifiManager = context!!.getSystemService(Context.WIFI_SERVICE) as WifiManager
+//
+//        val intentFilter = IntentFilter()
+//        intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
+//        context!!.registerReceiver(wifiScanReceiver, intentFilter)
 
         val linearLayoutManager = LinearLayoutManager(context, RecyclerView.VERTICAL,false)
         adapter.listener = this@WifiScanningFragment
@@ -62,30 +60,32 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
         }
 
         if(viewModel.connectedBluetoothDevice != null){
-            CoroutineScope(Dispatchers.Main).launch {
+            uiScope.launch {
+                val deviceCommunicator = DeviceCommunicator.buildCommunicator(viewModel.connectedBluetoothDevice!!, Security())
+                val result = withContext(bgDispatcher){
 
-                val task = withContext(Dispatchers.IO){
-                    viewModel.getWifiNetworks()
+                    viewModel.getWifiNetworks(deviceCommunicator!!)
                 }
 
+                val networks = result.value?.networksList
             }
         }
     }
 
 
 
-    private val wifiScanReceiver = object : BroadcastReceiver() {
+//    private val wifiScanReceiver = object : BroadcastReceiver() {
+//
+//        override fun onReceive(context: Context, intent: Intent) {
+//            val success = intent.getBooleanExtra(WifiManager.EXTRA_RESULTS_UPDATED, false)
+//            if (success) {
+//                //Get all found networks
+//                val results:MutableList<ScanResult> = wifiManager.scanResults
+//            }
+//        }
+//    }
 
-        override fun onReceive(context: Context, intent: Intent) {
-            val success = intent.getBooleanExtra(WifiManager.EXTRA_RESULTS_UPDATED, false)
-            if (success) {
-                //Get all found networks
-                val results:MutableList<ScanResult> = wifiManager.scanResults
-            }
-        }
-    }
-
-    override fun onNetworkClicked(scanResult: ScanResult) {
+    override fun onNetworkClicked(scanResult: WifiNew.ScanNetworksReply.Network) {
         //TODO join network
         viewModel.selectedNetwork = scanResult
 

@@ -1,7 +1,9 @@
 package jtycz.simple.mesh.connector.utils
 
 import android.util.SparseArray
+import com.google.protobuf.GeneratedMessageV3
 import jtycz.simple.mesh.connector.bluetooth.*
+import jtycz.simple.mesh.connector.protos.Common
 import jtycz.simple.mesh.connector.security.Security
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -64,6 +66,21 @@ class DeviceCommunicator private constructor(requestWriter: RequestWriter) {
         if (callback != null) {
             callback(responseFrame)
         } else {
+        }
+    }
+
+    fun <V : GeneratedMessageV3> buildResult(response: DeviceRequestUtil.DeviceResponse?, successTransformer: (DeviceRequestUtil.DeviceResponse) -> V
+    ): Result<V, Common.ResultCode> {
+        if (response == null) {
+            return Result.Absent()
+        }
+
+        return if (response.resultCode == 0) {
+            val transformed = successTransformer(response)
+            Result.Present(transformed)
+        } else {
+            val code = response.resultCode.toResultCode()
+            Result.Error(code)
         }
     }
 }

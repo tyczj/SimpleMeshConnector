@@ -4,6 +4,7 @@ import com.google.protobuf.AbstractMessage
 import jtycz.simple.mesh.connector.bluetooth.InboundFrame
 import jtycz.simple.mesh.connector.bluetooth.MAX_FRAME_SIZE
 import jtycz.simple.mesh.connector.bluetooth.OutboundFrame
+import jtycz.simple.mesh.connector.protos.Common
 import jtycz.simple.mesh.connector.protos.Extensions
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -119,5 +120,25 @@ fun ByteBuffer.putUntilFull(other: ByteBuffer) {
     // there's method call overhead here, but given the context, I'm not too concerned.
     while (this.hasRemaining() && other.hasRemaining()) {
         this.put(other.get())
+    }
+}
+
+fun Int.toResultCode(): Common.ResultCode {
+    return when (this) {
+        0 -> Common.ResultCode.OK
+
+
+        // FIXME: this should be "NOT_SUPPORTED"
+        -120 -> Common.ResultCode.UNRECOGNIZED
+
+
+        -130 -> Common.ResultCode.NOT_ALLOWED
+        -160 -> Common.ResultCode.TIMEOUT
+        -170 -> Common.ResultCode.NOT_FOUND
+        -180 -> Common.ResultCode.ALREADY_EXIST
+        -210 -> Common.ResultCode.INVALID_STATE
+        -260 -> Common.ResultCode.NO_MEMORY
+        -270 -> Common.ResultCode.INVALID_PARAM
+        else -> throw IllegalArgumentException("Invalid value for ResultCode: $this")
     }
 }
