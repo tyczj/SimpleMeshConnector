@@ -33,10 +33,19 @@ class BluetoothUtils {
 
         fun getDeviceName(serialNumber:String): String {
 
-            val deviceType =
-                getDeviceTypeName(serialNumber)
+            val deviceType = getDeviceTypeName(serialNumber)
             val lastSix = serialNumber.substring(serialNumber.length - BLUETOOTH_ID_LENGTH).toUpperCase()
             return "$deviceType-$lastSix"
+        }
+
+        fun getDeviceSecret(rawBarcodeValue:String):String{
+            val splitValues = rawBarcodeValue.split(" ")
+            return splitValues[1]
+        }
+
+        fun getDeviceSerialnumber(rawBarcodeValue:String):String{
+            val splitValues = rawBarcodeValue.split(" ")
+            return splitValues[0]
         }
 
         private fun getDeviceTypeName(serialNumber: String): String {

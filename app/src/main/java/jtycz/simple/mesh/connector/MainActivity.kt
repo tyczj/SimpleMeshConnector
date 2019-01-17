@@ -38,10 +38,13 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
         if(requestCode == BARCODE_REQUEST_CODE && resultCode == Activity.RESULT_OK){
             //Go and connect to device
             val barcode = data!!.getStringExtra("barcode")
-            val deviceName = BluetoothUtils.getDeviceName(barcode)
+            val serialNumber = BluetoothUtils.getDeviceSerialnumber(barcode)
+            val deviceName = BluetoothUtils.getDeviceName(serialNumber)
+            val deviceSecret = BluetoothUtils.getDeviceSecret(barcode)
             bluetoothFragment = BluetoothScanningFragment.newInstance()
             val bundle = Bundle()
             bundle.putString("deviceName",deviceName)
+            bundle.putString("deviceSecret",deviceSecret)
             bluetoothFragment!!.arguments = bundle
             supportFragmentManager.beginTransaction()
                 .replace(R.id.container, bluetoothFragment!!)
