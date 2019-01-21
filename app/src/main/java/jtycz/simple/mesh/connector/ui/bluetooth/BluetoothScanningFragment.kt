@@ -122,6 +122,7 @@ class BluetoothScanningFragment : androidx.fragment.app.Fragment() {
                     GlobalScope.launch(Dispatchers.Default) {
                         for (packet in messageWriteChannel) {
                             writeCharacteristic?.value = packet
+                            gatt.writeCharacteristic(writeCharacteristic)
                         }
                     }
 

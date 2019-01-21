@@ -1,6 +1,5 @@
 package jtycz.simple.mesh.connector.ui.wifi
 
-import android.net.wifi.ScanResult
 import androidx.lifecycle.ViewModel
 import jtycz.simple.mesh.connector.bluetooth.ConnectedBluetoothDevice
 import jtycz.simple.mesh.connector.protos.Common

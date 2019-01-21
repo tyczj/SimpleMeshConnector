@@ -20,9 +20,9 @@ class DeviceCommunicator private constructor(requestWriter: RequestWriter) {
         private val AES_CCM_MAC_SIZE = 8
 
         suspend fun buildCommunicator(connectedBluetoothDevice: ConnectedBluetoothDevice,security: Security):DeviceCommunicator?{
-            val packetSplitter = PacketSplitter { packet ->
+            val packetSplitter = PacketSplitter({ packet ->
                 connectedBluetoothDevice.packetSendChannel.offer(packet)
-            }
+            })
             val frameWriter = OutboundFrameWriter { packetSplitter.splitIntoPackets(it) }
             val frameReader = InboundFrameReader()
             GlobalScope.launch(Dispatchers.Default) {

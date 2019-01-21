@@ -1,6 +1,5 @@
 package jtycz.simple.mesh.connector.ui.wifi
 
-import android.net.wifi.ScanResult
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -25,7 +24,7 @@ class WifiAdapter: RecyclerView.Adapter<WifiAdapter.ViewHolder>() {
         }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.wifi_scan_result_row_layout, parent, false)
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.network_scan_result_row_layout, parent, false)
         return ViewHolder(v)
     }
 
@@ -39,7 +38,7 @@ class WifiAdapter: RecyclerView.Adapter<WifiAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View):RecyclerView.ViewHolder(view),View.OnClickListener{
 
-        var ssid: TextView = view.findViewById(R.id.ssid)
+        var ssid: TextView = view.findViewById(R.id.network_name)
 
         init {
             view.setOnClickListener(this)

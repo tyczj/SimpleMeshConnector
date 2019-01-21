@@ -14,7 +14,7 @@ import jtycz.simple.mesh.connector.R
 import jtycz.simple.mesh.connector.protos.WifiNew
 import jtycz.simple.mesh.connector.security.Security
 import jtycz.simple.mesh.connector.utils.DeviceCommunicator
-import kotlinx.android.synthetic.main.wifi_scanning_layout.*
+import kotlinx.android.synthetic.main.network_scanning_layout.*
 import kotlinx.coroutines.*
 
 class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
@@ -36,7 +36,7 @@ class WifiScanningFragment: Fragment(), WifiAdapter.OnNetworkClickedListener {
     private val wifiSecurityTypes = arrayOf("WEP", "PSK", "EAP")
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        return inflater.inflate(R.layout.wifi_scanning_layout, container, false)
+        return inflater.inflate(R.layout.network_scanning_layout, container, false)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?){
