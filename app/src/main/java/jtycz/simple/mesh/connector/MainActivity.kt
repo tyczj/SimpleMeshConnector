@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.ParcelUuid
 import android.util.Log
+import jtycz.simple.mesh.connector.bluetooth.BLELiveDataCallbacks
 import jtycz.simple.mesh.connector.ui.barcode.BarcodeScanningActivity
 import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothScanningFragment
 import jtycz.simple.mesh.connector.bluetooth.BluetoothUtils
@@ -40,6 +41,7 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
     private lateinit var bluetoothAdapter:BluetoothAdapter
     private lateinit var deviceName:String
     private lateinit var deviceSecret:String
+    private var bluetoothCallback:BLELiveDataCallbacks? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -197,6 +199,7 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
             super.onConnectionStateChange(gatt, status, newState)
             if(newState == BluetoothProfile.STATE_CONNECTED){
+                bluetoothCallback = BLELiveDataCallbacks()
                 gatt?.discoverServices()
             }
         }

@@ -1,11 +1,17 @@
 package jtycz.simple.mesh.connector.utils
 
+import android.os.Looper
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import com.google.protobuf.AbstractMessage
 import jtycz.simple.mesh.connector.bluetooth.InboundFrame
 import jtycz.simple.mesh.connector.bluetooth.MAX_FRAME_SIZE
 import jtycz.simple.mesh.connector.bluetooth.OutboundFrame
 import jtycz.simple.mesh.connector.protos.Common
 import jtycz.simple.mesh.connector.protos.Extensions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicInteger
@@ -140,5 +146,45 @@ fun Int.toResultCode(): Common.ResultCode {
         -260 -> Common.ResultCode.NO_MEMORY
         -270 -> Common.ResultCode.INVALID_PARAM
         else -> throw IllegalArgumentException("Invalid value for ResultCode: $this")
+    }
+}
+
+fun <T> MutableLiveData<T>.setOnMainThread(newValue: T) {
+    if (isThisTheMainThread()) {
+        this.value = newValue
+    } else {
+        this.postValue(newValue)
+    }
+}
+
+
+fun <T> LiveData<T>.castAndSetOnMainThread(newValue: T) {
+    (this as MutableLiveData).setOnMainThread(newValue)
+}
+
+
+fun <T> LiveData<T>.castAndPost(value: T?) {
+    (this as MutableLiveData).postValue(value)
+}
+
+private val mainLooper = Looper.getMainLooper()
+
+
+fun isThisTheMainThread(): Boolean = mainLooper === Looper.myLooper()
+
+/** @throws [IllegalStateException] if not called from the main thread */
+fun checkIsThisTheMainThread() {
+    check(isThisTheMainThread()) { "Not on the main thread!" }
+}
+
+/**
+ * Executes the runnable immediately if called from the main thread,
+ * otherwise, it will be posted to the main thread.
+ */
+fun runOnMainThread(runnable: () -> Unit) {
+    if (isThisTheMainThread()) {
+        runnable()
+    } else {
+        GlobalScope.launch(Dispatchers.Main) { runnable() }
     }
 }
