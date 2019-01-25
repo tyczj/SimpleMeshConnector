@@ -109,36 +109,36 @@ class BluetoothScanningFragment : androidx.fragment.app.Fragment() {
     private val gattCallback = object : BluetoothGattCallback(){
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
 
-            val service = gatt?.services?.firstOrNull{it.uuid == BT_SETUP_SERVICE_ID}
-            val readCharacteristic = service?.characteristics?.firstOrNull { it.uuid == BT_SETUP_READ_CHARACTERISTIC_ID }
-            val writeCharacteristic = service?.characteristics?.firstOrNull {it.uuid == BT_SETUP_WRITE_CHARACTERISTIC_ID}
-            gatt?.setCharacteristicNotification(readCharacteristic,true)
-            val descriptor = readCharacteristic?.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID)
-            descriptor?.let {
-                if(it.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)){
-                    gatt.writeDescriptor(descriptor)
-
-                    val messageWriteChannel = Channel<ByteArray>(Channel.UNLIMITED)
-                    GlobalScope.launch(Dispatchers.Default) {
-                        for (packet in messageWriteChannel) {
-                            writeCharacteristic?.value = packet
-                            gatt.writeCharacteristic(writeCharacteristic)
-                        }
-                    }
-
-                    val receiveChannel = Channel<ByteArray>(256)
-
-                    val connectedDevice = ConnectedBluetoothDevice(
-                        deviceName,
-                        deviceSecret,
-                        gatt,
-                        writeCharacteristic!!,
-                        messageWriteChannel,
-                        receiveChannel
-                    )
-                    listener.onBluetoothConnected(connectedDevice)
-                }
-            }
+//            val service = gatt?.services?.firstOrNull{it.uuid == BT_SETUP_SERVICE_ID}
+//            val readCharacteristic = service?.characteristics?.firstOrNull { it.uuid == BT_SETUP_READ_CHARACTERISTIC_ID }
+//            val writeCharacteristic = service?.characteristics?.firstOrNull {it.uuid == BT_SETUP_WRITE_CHARACTERISTIC_ID}
+//            gatt?.setCharacteristicNotification(readCharacteristic,true)
+//            val descriptor = readCharacteristic?.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID)
+//            descriptor?.let {
+//                if(it.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)){
+//                    gatt.writeDescriptor(descriptor)
+//
+//                    val messageWriteChannel = Channel<ByteArray>(Channel.UNLIMITED)
+//                    GlobalScope.launch(Dispatchers.Default) {
+//                        for (packet in messageWriteChannel) {
+//                            writeCharacteristic?.value = packet
+//                            gatt.writeCharacteristic(writeCharacteristic)
+//                        }
+//                    }
+//
+//                    val receiveChannel = Channel<ByteArray>(256)
+//
+//                    val connectedDevice = ConnectedBluetoothDevice(
+//                        deviceName,
+//                        deviceSecret,
+//                        gatt,
+//                        writeCharacteristic!!,
+//                        messageWriteChannel,
+//                        receiveChannel
+//                    )
+//                    listener.onBluetoothConnected(connectedDevice)
+//                }
+//            }
         }
 
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {

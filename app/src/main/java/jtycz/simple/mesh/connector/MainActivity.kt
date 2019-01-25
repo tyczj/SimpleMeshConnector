@@ -11,7 +11,11 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.ParcelUuid
 import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.Observer
+import io.particle.mesh.bluetooth.connecting.ConnectionState
 import jtycz.simple.mesh.connector.bluetooth.BLELiveDataCallbacks
+import jtycz.simple.mesh.connector.bluetooth.BTCharacteristicWriter
 import jtycz.simple.mesh.connector.ui.barcode.BarcodeScanningActivity
 import jtycz.simple.mesh.connector.ui.bluetooth.BluetoothScanningFragment
 import jtycz.simple.mesh.connector.bluetooth.BluetoothUtils
@@ -22,10 +26,7 @@ import jtycz.simple.mesh.connector.security.Security
 import jtycz.simple.mesh.connector.ui.main.MainFragment
 import jtycz.simple.mesh.connector.ui.mesh.MeshScanningFragment
 import jtycz.simple.mesh.connector.ui.wifi.WifiScanningFragment
-import jtycz.simple.mesh.connector.utils.DeviceCommunicator
-import jtycz.simple.mesh.connector.utils.DeviceRequestUtil
-import jtycz.simple.mesh.connector.utils.Result
-import jtycz.simple.mesh.connector.utils.asRequest
+import jtycz.simple.mesh.connector.utils.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlin.coroutines.Continuation
@@ -42,6 +43,8 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
     private lateinit var deviceName:String
     private lateinit var deviceSecret:String
     private var bluetoothCallback:BLELiveDataCallbacks? = null
+    private var bluetoothWriteChannel:BTCharacteristicWriter? = null
+    private val lifecycleOwner = SimpleLifecycleOwner()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -140,8 +143,67 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
     }
 
     private fun connectToGatt(device:BluetoothDevice){
+        lifecycleOwner.setNewState(Lifecycle.State.RESUMED)
         bluetoothAdapter.cancelDiscovery()
-        device.connectGatt(this,false,gattCallback)
+        val bluetoothDevice = bluetoothAdapter.getRemoteDevice(device.address)
+        bluetoothCallback = BLELiveDataCallbacks()
+
+        val gatt = bluetoothDevice.connectGatt(this,false,bluetoothCallback)
+
+        bluetoothCallback!!.connectionStateChangedLD.observe(lifecycleOwner, Observer {
+            if(it == ConnectionState.CONNECTED){
+                gatt.discoverServices()
+            }
+        })
+
+        bluetoothCallback!!.onServicesDiscoveredLD.observe(lifecycleOwner, Observer { _ ->
+            val service = gatt.services.firstOrNull{it.uuid == BluetoothUtils.BT_SETUP_SERVICE_ID }
+            val readCharacteristic = service?.characteristics?.firstOrNull { it.uuid == BluetoothUtils.BT_SETUP_READ_CHARACTERISTIC_ID }
+            val writeCharacteristic = service?.characteristics?.firstOrNull {it.uuid == BluetoothUtils.BT_SETUP_WRITE_CHARACTERISTIC_ID }
+            gatt?.setCharacteristicNotification(readCharacteristic,true)
+            val descriptor = readCharacteristic?.getDescriptor(BluetoothUtils.CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID)
+            bluetoothWriteChannel = BTCharacteristicWriter(gatt!!,writeCharacteristic!!,bluetoothCallback!!.onCharacteristicWriteCompleteLD)
+            descriptor?.let {
+                if(it.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)){
+                    gatt.writeDescriptor(descriptor)
+
+                    val messageWriteChannel = Channel<ByteArray>(Channel.UNLIMITED)
+                    GlobalScope.launch(Dispatchers.Default) {
+                        for (packet in messageWriteChannel) {
+                            bluetoothWriteChannel?.writeToCharacteristic(packet)
+                        }
+                    }
+
+                    connectedBluetoothDevice = ConnectedBluetoothDevice(
+                        deviceName,
+                        deviceSecret,
+                        gatt,
+                        bluetoothCallback!!.connectionStateChangedLD,
+                        messageWriteChannel,
+                        bluetoothCallback!!.readOrChangedReceiveChannel as Channel<ByteArray>)
+//                    onBluetoothConnected(connectedDevice)
+
+                    GlobalScope.launch(Dispatchers.Default) {
+
+                        for (i in 0..10){
+//                            val device = withTimeoutOrNull(15000){
+//                                DeviceCommunicator.buildCommunicator(connectedBluetoothDevice!!, Security())
+//                            }
+
+                            val deviceComm = DeviceCommunicator.buildCommunicator(connectedBluetoothDevice!!, Security())
+
+                            if (deviceComm != null){
+                                val results = getMeshNetworks(deviceComm)
+                                val networks = results.value?.networksList
+                                break
+                            }
+                        }
+
+                        Log.d("MainActivity","Connected?")
+                    }
+                }
+            }
+        })
     }
 
     private val gattCallback = object : BluetoothGattCallback(){
@@ -152,6 +214,7 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
             val writeCharacteristic = service?.characteristics?.firstOrNull {it.uuid == BluetoothUtils.BT_SETUP_WRITE_CHARACTERISTIC_ID }
             gatt?.setCharacteristicNotification(readCharacteristic,true)
             val descriptor = readCharacteristic?.getDescriptor(BluetoothUtils.CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID)
+            bluetoothWriteChannel = BTCharacteristicWriter(gatt!!,writeCharacteristic!!,bluetoothCallback!!.onCharacteristicWriteCompleteLD)
             descriptor?.let {
                 if(it.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)){
                     gatt.writeDescriptor(descriptor)
@@ -159,8 +222,7 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
                     val messageWriteChannel = Channel<ByteArray>(Channel.UNLIMITED)
                     GlobalScope.launch(Dispatchers.Default) {
                         for (packet in messageWriteChannel) {
-                            writeCharacteristic?.value = packet
-                            gatt.writeCharacteristic(writeCharacteristic)
+                            bluetoothWriteChannel?.writeToCharacteristic(packet)
                         }
                     }
 
@@ -168,18 +230,13 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
                         deviceName,
                         deviceSecret,
                         gatt,
-                        writeCharacteristic!!,
+                        bluetoothCallback!!.connectionStateChangedLD,
                         messageWriteChannel,
-                        receiveChannel
-                    )
-//                    onBluetoothConnected(connectedDevice)
+                        bluetoothCallback!!.readOrChangedReceiveChannel as Channel<ByteArray>)
 
                     GlobalScope.launch(Dispatchers.Default) {
 
                         for (i in 0..10){
-//                            val device = withTimeoutOrNull(15000){
-//                                DeviceCommunicator.buildCommunicator(connectedBluetoothDevice!!, Security())
-//                            }
 
                             val device = DeviceCommunicator.buildCommunicator(connectedBluetoothDevice!!, Security())
 
@@ -199,7 +256,7 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
             super.onConnectionStateChange(gatt, status, newState)
             if(newState == BluetoothProfile.STATE_CONNECTED){
-                bluetoothCallback = BLELiveDataCallbacks()
+
                 gatt?.discoverServices()
             }
         }

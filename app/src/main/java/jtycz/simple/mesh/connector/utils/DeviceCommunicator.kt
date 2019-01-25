@@ -26,7 +26,7 @@ class DeviceCommunicator private constructor(requestWriter: RequestWriter) {
             val frameWriter = OutboundFrameWriter { packetSplitter.splitIntoPackets(it) }
             val frameReader = InboundFrameReader()
             GlobalScope.launch(Dispatchers.Default) {
-                for (packet in connectedBluetoothDevice.packetReceiveChannel) {
+                for (packet in connectedBluetoothDevice.closablePacketReceiveChannel) {
                     frameReader.receivePacket(BlePacket(packet))
                 }
             }

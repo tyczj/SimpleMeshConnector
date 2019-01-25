@@ -1,7 +1,7 @@
 package io.particle.mesh.bluetooth.connecting
 
 import android.bluetooth.BluetoothProfile
-import io.particle.mesh.common.buildIntValueMap
+import jtycz.simple.mesh.connector.utils.buildIntValueMap
 
 
 enum class ConnectionState(val intValue: Int)  {

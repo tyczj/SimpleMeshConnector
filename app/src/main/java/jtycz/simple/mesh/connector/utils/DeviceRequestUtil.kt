@@ -1,6 +1,7 @@
 package jtycz.simple.mesh.connector.utils
 
 import android.os.Looper
+import android.util.SparseArray
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.google.protobuf.AbstractMessage
@@ -187,4 +188,13 @@ fun runOnMainThread(runnable: () -> Unit) {
     } else {
         GlobalScope.launch(Dispatchers.Main) { runnable() }
     }
+}
+
+fun <T> buildIntValueMap(values: Array<T>, transformer: (T) -> Int): SparseArray<T> {
+    val intValueMap = SparseArray<T>(values.size)
+    for (v in values) {
+        val key = transformer(v)
+        intValueMap.put(key, v)
+    }
+    return intValueMap
 }

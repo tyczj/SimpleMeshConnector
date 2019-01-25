@@ -42,15 +42,10 @@ class BLELiveDataCallbacks : BluetoothGattCallback() {
     }
 
     override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
-        (onServicesDiscoveredLD as MutableLiveData).setOnMainThread(
-                GATTStatusCode.fromIntValue(status)
-        )
+        (onServicesDiscoveredLD as MutableLiveData).setOnMainThread(GATTStatusCode.fromIntValue(status))
     }
 
-    override fun onCharacteristicChanged(
-            gatt: BluetoothGatt,
-            characteristic: BluetoothGattCharacteristic
-    ) {
+    override fun onCharacteristicChanged(gatt: BluetoothGatt,characteristic: BluetoothGattCharacteristic) {
 //        if (!characteristic.value.truthy()) {
 //            (onCharacteristicChangedFailureLD as MutableLiveData).setOnMainThread(characteristic)
 //            return
@@ -71,11 +66,9 @@ class BLELiveDataCallbacks : BluetoothGattCallback() {
         receivePacket(characteristic.value)
     }
 
-    override fun onCharacteristicWrite(gatt: BluetoothGatt,characteristic: BluetoothGattCharacteristic,
-            statusCode: Int) {(
-            onCharacteristicWriteCompleteLD as MutableLiveData).setOnMainThread(
-                GATTStatusCode.fromIntValue(statusCode)
-        )}
+    override fun onCharacteristicWrite(gatt: BluetoothGatt,characteristic: BluetoothGattCharacteristic,statusCode: Int) {
+        (onCharacteristicWriteCompleteLD as MutableLiveData).setOnMainThread(GATTStatusCode.fromIntValue(statusCode))
+    }
 
     override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
         onMtuChangedLD.castAndPost(mtu)
