@@ -160,9 +160,13 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
             val service = gatt.services.firstOrNull{it.uuid == BluetoothUtils.BT_SETUP_SERVICE_ID }
             val readCharacteristic = service?.characteristics?.firstOrNull { it.uuid == BluetoothUtils.BT_SETUP_READ_CHARACTERISTIC_ID }
             val writeCharacteristic = service?.characteristics?.firstOrNull {it.uuid == BluetoothUtils.BT_SETUP_WRITE_CHARACTERISTIC_ID }
-            gatt?.setCharacteristicNotification(readCharacteristic,true)
+
+            if(!gatt!!.setCharacteristicNotification(readCharacteristic,true)){
+                return@Observer
+            }
+
             val descriptor = readCharacteristic?.getDescriptor(BluetoothUtils.CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR_UUID)
-            bluetoothWriteChannel = BTCharacteristicWriter(gatt!!,writeCharacteristic!!,bluetoothCallback!!.onCharacteristicWriteCompleteLD)
+            bluetoothWriteChannel = BTCharacteristicWriter(gatt,writeCharacteristic!!,bluetoothCallback!!.onCharacteristicWriteCompleteLD)
             descriptor?.let {
                 if(it.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)){
                     gatt.writeDescriptor(descriptor)
@@ -185,17 +189,23 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
 
                     GlobalScope.launch(Dispatchers.Default) {
 
-                        for (i in 0..10){
-//                            val device = withTimeoutOrNull(15000){
-//                                DeviceCommunicator.buildCommunicator(connectedBluetoothDevice!!, Security())
-//                            }
+                        val deviceComm = DeviceCommunicator.buildCommunicator(connectedBluetoothDevice!!, Security())
 
-                            val deviceComm = DeviceCommunicator.buildCommunicator(connectedBluetoothDevice!!, Security())
-
-                            if (deviceComm != null){
+                        if (deviceComm != null){
+                            while (true){
                                 val results = getMeshNetworks(deviceComm)
                                 val networks = results.value?.networksList
-                                break
+                                if(networks!!.size > 0) {
+                                    val reply = sendPrepareJoiner(deviceComm,networks[0])
+                                    val value = reply.value
+                                    if(value != null){
+                                        val credentialReply = sendNetworkCredentials(deviceComm,value.eui64,value.password)
+                                        delay(10000)
+                                        joingMeshNetwork(deviceComm)
+                                        break
+                                    }
+                                }
+                                delay(3000)
                             }
                         }
 
@@ -286,6 +296,45 @@ class MainActivity : AppCompatActivity(), BluetoothScanningFragment.OnBluetoothC
             }
         }
         return communicator.buildResult(response) { r -> Mesh.ScanNetworksReply.parseFrom(r.payloadData) }
+    }
+
+    private suspend fun sendPrepareJoiner(communicator: DeviceCommunicator,network: Mesh.NetworkInfo): Result<Mesh.PrepareJoinerReply, Common.ResultCode> {
+        val joiner = Mesh.PrepareJoinerRequest.newBuilder().setNetwork(network).build()
+        val timeoutMills = 20000L
+        val requestFrame = joiner.asRequest()
+        val response = withTimeoutOrNull(timeoutMills) {
+            suspendCoroutine { continuation: Continuation<DeviceRequestUtil.DeviceResponse?> ->
+                communicator.doSendRequest(requestFrame) { continuation.resume(it) }
+            }
+        }
+        return communicator.buildResult(response) { r -> Mesh.PrepareJoinerReply.parseFrom(r.payloadData) }
+    }
+
+    private suspend fun sendNetworkCredentials(communicator: DeviceCommunicator,eui64: String,joiningCredential: String): Result<Mesh.AddJoinerReply, Common.ResultCode>{
+        val request = Mesh.AddJoinerRequest.newBuilder().setEui64(eui64).setPassword(joiningCredential).build()
+        val timeoutMills = 20000L
+        val requestFrame = request.asRequest()
+
+        val response = withTimeoutOrNull(timeoutMills) {
+            suspendCoroutine { continuation: Continuation<DeviceRequestUtil.DeviceResponse?> ->
+                communicator.doSendRequest(requestFrame) { continuation.resume(it) }
+            }
+        }
+
+        return communicator.buildResult(response) { r -> Mesh.AddJoinerReply.parseFrom(r.payloadData) }
+    }
+
+    private suspend fun joingMeshNetwork(communicator: DeviceCommunicator):Result<Mesh.JoinNetworkReply, Common.ResultCode>{
+        val request = Mesh.JoinNetworkRequest.newBuilder().build()
+        val timeoutMills = 20000L
+        val requestFrame = request.asRequest()
+        val response = withTimeoutOrNull(timeoutMills) {
+            suspendCoroutine { continuation: Continuation<DeviceRequestUtil.DeviceResponse?> ->
+                communicator.doSendRequest(requestFrame) { continuation.resume(it) }
+            }
+        }
+
+        return communicator.buildResult(response) { r -> Mesh.JoinNetworkReply.parseFrom(r.payloadData) }
     }
 
 }
